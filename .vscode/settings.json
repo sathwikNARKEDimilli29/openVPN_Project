@@ -1,0 +1,10 @@
+{
+    "files.associations": {
+        "ping.h": "c",
+        "init.h": "c",
+        "openvpn.h": "c",
+        "options.h": "c",
+        "manage.h": "c",
+        "plugin.h": "c"
+    }
+}
