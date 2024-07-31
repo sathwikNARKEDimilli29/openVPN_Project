@@ -32,7 +32,7 @@
 #include "memdbg.h"
 
 /* Timeout duration in seconds for both ping and restart actions */
-#define TIMEOUT_DURATION 30
+#define TIMEOUT_DURATION 5
 
 /*
  * This random string identifies an OpenVPN ping packet.
