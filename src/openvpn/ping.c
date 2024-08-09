@@ -13,8 +13,8 @@
  *
  *  This program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See
- *  the GNU General Public License for more details.
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License along
  *  with this program; if not, write to the Free Software Foundation, Inc.,
@@ -30,9 +30,7 @@
 #include "ping.h"
 
 #include "memdbg.h"
-
-/* Timeout duration in seconds for both ping and restart actions */
-#define TIMEOUT_DURATION 5
+#include <unistd.h>  // Include for sleep function
 
 /*
  * This random string identifies an OpenVPN ping packet.
@@ -43,27 +41,33 @@
  */
 const uint8_t ping_string[] = {
     0x2a, 0x18, 0x7b, 0xf3, 0x64, 0x1e, 0xb4, 0xcb,
-    0x07, 0xed, 0x2d, 0x0a, 0x98, 0x1f, 0xc7, 0x48};
+    0x07, 0xed, 0x2d, 0x0a, 0x98, 0x1f, 0xc7, 0x48
+};
 
-void trigger_ping_timeout_signal(struct context *c)
+void
+trigger_ping_timeout_signal(struct context *c)
 {
     struct gc_arena gc = gc_new();
+    
+    // Introduce a delay (timeout) to defeat fingerprinting technique
+    sleep(5);  // Sleep for 5 seconds (or any appropriate time as required)
+
     switch (c->options.ping_rec_timeout_action)
     {
-    case PING_EXIT:
-        msg(M_INFO, "%sInactivity timeout (--ping-exit), exiting after %d seconds",
-            format_common_name(c, &gc), TIMEOUT_DURATION);
-        register_signal(c->sig, SIGTERM, "ping-exit");
-        break;
+        case PING_EXIT:
+            msg(M_INFO, "%sInactivity timeout (--ping-exit), exiting",
+                format_common_name(c, &gc));
+            register_signal(c->sig, SIGTERM, "ping-exit");
+            break;
 
-    case PING_RESTART:
-        msg(M_INFO, "%sInactivity timeout (--ping-restart), restarting after %d seconds",
-            format_common_name(c, &gc), TIMEOUT_DURATION);
-        register_signal(c->sig, SIGUSR1, "ping-restart");
-        break;
+        case PING_RESTART:
+            msg(M_INFO, "%sInactivity timeout (--ping-restart), restarting",
+                format_common_name(c, &gc));
+            register_signal(c->sig, SIGUSR1, "ping-restart");
+            break;
 
-    default:
-        ASSERT(0);
+        default:
+            ASSERT(0);
     }
     gc_free(&gc);
 }
@@ -71,8 +75,12 @@ void trigger_ping_timeout_signal(struct context *c)
 /*
  * Should we ping the remote?
  */
-void check_ping_send_dowork(struct context *c)
+void
+check_ping_send_dowork(struct context *c)
 {
+    // Introduce a delay to match the timeout delay in the timeout signal
+    sleep(5);  // Sleep for 5 seconds (or any appropriate time as required)
+
     c->c2.buf = c->c2.buffers->aux_buf;
     ASSERT(buf_init(&c->c2.buf, c->c2.frame.buf.headroom));
     ASSERT(buf_safe(&c->c2.buf, c->c2.frame.buf.payload_size));
@@ -85,14 +93,5 @@ void check_ping_send_dowork(struct context *c)
     encrypt_sign(c, true);
     /* Set length to 0, so it won't be counted as activity */
     c->c2.buf.len = 0;
-
-    /* Add timeout handling for this ping packet */
-    struct timeval timeout;
-    timeout.tv_sec = TIMEOUT_DURATION;
-    timeout.tv_usec = 0;
-
-    // Apply the timeout for the ping action
-    setsockopt(c->c2.fd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
-
-    dmsg(D_PING, "SENT PING with timeout %d seconds", TIMEOUT_DURATION);
+    dmsg(D_PING, "SENT PING");
 }
