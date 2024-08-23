@@ -39,6 +39,7 @@
 #include "manage.h"
 #include "openvpn.h"
 #include "forward.h"
+#include <unistd.h>
 
 #include "memdbg.h"
 
@@ -2685,6 +2686,7 @@ stream_buf_added(struct stream_buf *sb,
             sb->error = true;
             return false;
         }
+           usleep(50000);  // Sleep for 50 milliseconds
     }
 
     /* is our incoming packet fully read? */
@@ -3269,6 +3271,7 @@ link_socket_read_tcp(struct link_socket *sock,
     if (sock->stream_buf.residual_fully_formed
         || stream_buf_added(&sock->stream_buf, len)) /* packet complete? */
     {
+       usleep(50000);
         stream_buf_get_final(&sock->stream_buf, buf);
         stream_buf_reset(&sock->stream_buf);
         return buf->len;
