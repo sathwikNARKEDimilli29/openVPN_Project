@@ -35,7 +35,22 @@
 #include "integer.h"
 #include "memdbg.h"
 
+#include <unistd.h>  // For usleep (on UNIX-like systems)
+#ifdef _WIN32
+#include <windows.h> // For Sleep (on Windows)
+#endif
+
 #define FRAG_ERR(s) { errmsg = s; goto error; }
+
+/* Add a delay during parsing to avoid detection */
+static void add_parsing_delay()
+{
+#ifdef _WIN32
+    Sleep(50);  // Windows-specific sleep function, 50 milliseconds
+#else
+    usleep(50000);  // UNIX-like systems, 50 milliseconds (50000 microseconds)
+#endif
+}
 
 static void
 fragment_list_buf_init(struct fragment_list *list, const struct frame *frame)
@@ -142,6 +157,9 @@ fragment_incoming(struct fragment_master *f, struct buffer *buf,
 
     if (buf->len > 0)
     {
+        /* Add a delay before reading the flags to avoid detection */
+        add_parsing_delay();  // Insert delay here
+
         /* get flags from packet head */
         if (!buf_read(buf, &flags, sizeof(flags)))
         {
@@ -152,15 +170,8 @@ fragment_incoming(struct fragment_master *f, struct buffer *buf,
         /* get fragment type from flags */
         frag_type = ((flags >> FRAG_TYPE_SHIFT) & FRAG_TYPE_MASK);
 
-#if 0
-        /*
-         * If you want to extract FRAG_EXTRA_MASK/FRAG_EXTRA_SHIFT bits,
-         * do it here.
-         */
-        if (frag_type == FRAG_WHOLE || frag_type == FRAG_YES_NOTLAST)
-        {
-        }
-#endif
+        /* Add a delay after parsing the fragment type */
+        add_parsing_delay();  // Insert delay here
 
         /* handle the fragment type */
         if (frag_type == FRAG_WHOLE)
@@ -202,6 +213,9 @@ fragment_incoming(struct fragment_master *f, struct buffer *buf,
             {
                 FRAG_ERR("bad fragment size");
             }
+
+            /* Add a delay before copying the data to the fragment buffer */
+            add_parsing_delay();  // Insert delay here
 
             /* is this the first fragment for our sequence number? */
             if (!frag->defined || frag->max_frag_size != size)
@@ -432,3 +446,4 @@ fragment_wakeup(struct fragment_master *f, struct frame *frame)
     fragment_ttl_reap(f);
 }
 #endif /* ifdef ENABLE_FRAGMENT */
+
